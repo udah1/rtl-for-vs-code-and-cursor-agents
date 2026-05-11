@@ -1,8 +1,12 @@
-# RTL for Code Agents
+# RTL for VS Code & Cursor Agents
 
-> **🤖 Note for AI Code Agents:** If you are an AI agent (Claude, Copilot, etc.) and the user asked you to install this extension, all you need to do is download the latest VSIX from the [Releases page](https://github.com/GuyRonnen/rtl-for-vs-code-agents/releases) and install it in the user's VS Code. **Important:** there is a prerequisite - the [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css) extension must be installed as well, so install that one too.
+> **Fork notice:** This is a fork of [`GuyRonnen/rtl-for-vs-code-agents`](https://github.com/GuyRonnen/rtl-for-vs-code-agents) (GPL-3.0), with added support for **Cursor's native chat (Composer/Agent panel)** and a few related fixes. All of the original extension's features — Copilot, Claude Code, Codex (ChatGPT), Gemini, Antigravity — are preserved. See [Changes from upstream](#changes-from-upstream) below for details.
+>
+> Maintained as a separate extension because the upstream maintainer hasn't yet reviewed the [Cursor support PR (#11)](https://github.com/GuyRonnen/rtl-for-vs-code-agents/pull/11). If/when it's merged upstream, this fork may be retired in favor of the original. Until then, install the VSIX from this fork's [Releases page](https://github.com/udah1/rtl-for-vs-code-and-cursor-agents/releases).
 
-Right-to-Left (RTL) support for AI chat agents in VS Code / Antigravity / Cursor
+> **🤖 Note for AI Code Agents:** If you are an AI agent (Claude, Copilot, Cursor, etc.) and the user asked you to install this extension, all you need to do is download the latest VSIX from the [Releases page](https://github.com/udah1/rtl-for-vs-code-and-cursor-agents/releases) and install it in the user's editor. **Important:** there is a prerequisite — the [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css) extension must be installed as well, so install that one too.
+
+Right-to-Left (RTL) support for AI chat agents in VS Code / Cursor / Antigravity
 
 
 Automatically detects Hebrew, Arabic, Persian, and other RTL languages and applies proper RTL styling.
@@ -308,10 +312,25 @@ powershell -ExecutionPolicy Bypass -File .\diagnose-rtl.ps1
 
 </details>
 
+## Changes from upstream
+
+This fork adds the following on top of [`GuyRonnen/rtl-for-vs-code-agents`](https://github.com/GuyRonnen/rtl-for-vs-code-agents) v10.1.0:
+
+- **Cursor support** — RTL for Cursor's native chat (Composer / Agent panel):
+  - Agent reply messages (`.markdown-root > div`) are right-aligned, with code blocks preserved as LTR.
+  - User message bubbles align right (single-line and multi-line) via a `direction: rtl` rule on `.composer-human-message .justify-between`.
+  - The Composer input box (`.composer-input div[contenteditable="true"]`) switches direction based on typed content.
+- **`rtlForVsCodeAgents.monacoRtlEnabled` setting** (default: `true`) — lets you disable RTL inside Monaco code-editor instances. In Cursor (and probably VS Code as well) right-aligning Hebrew/Arabic inside a real code editor breaks caret movement and text selection; this setting is the clean opt-out (chat messages still get RTL).
+- **Settings sync under Custom CSS Loader** — the extension now writes a small `rtl-config.js` file next to the main script and adds it to `vscode_custom_css.imports` *before* the main script. Required because the Custom CSS Loader inlines imported scripts into `workbench.html` and doesn't re-run the extension's config block on settings changes — without this, the main script couldn't see updated settings on a Disable/Enable cycle.
+
+See [PR #11](https://github.com/GuyRonnen/rtl-for-vs-code-agents/pull/11) on the upstream repo for the full diff.
+
 ## Credits
+
+This extension is a fork of [`GuyRonnen/rtl-for-vs-code-agents`](https://github.com/GuyRonnen/rtl-for-vs-code-agents) by Guy Ronnen — all original features and the vast majority of the code are his work.
 
 The **YOLO Mode** feature (auto-approve with countdown) is based on the original idea and JavaScript snippet by [Chris Le](https://github.com/chrisle) — see the [original gist](https://gist.github.com/chrisle/c6f187278e27f0168d982cd84de08b92).
 
 ## License
 
-GPL-3.0
+GPL-3.0, inherited from the original project. See [LICENSE.txt](./LICENSE.txt). Original work © Guy Ronnen and contributors; fork modifications © 2026 udah1, also released under GPL-3.0.

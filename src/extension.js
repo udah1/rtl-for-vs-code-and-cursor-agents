@@ -6,8 +6,8 @@ const https = require('https');
 
 const MARKER = 'RTL for VS Code Agents';
 const SCRIPT_FILE = 'rtl-for-vs-code-agents.js';
-const GITHUB_OWNER = 'GuyRonnen';
-const GITHUB_REPO = 'rtl-for-vs-code-agents';
+const GITHUB_OWNER = 'udah1';
+const GITHUB_REPO = 'rtl-for-vs-code-and-cursor-agents';
 const GITHUB_API_BASE = 'https://api.github.com';
 
 let statusBarItem;
