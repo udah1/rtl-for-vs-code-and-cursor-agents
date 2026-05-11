@@ -1029,7 +1029,7 @@
 
     // ─── Monaco Editor RTL toggle ─────────────────────────────────────────────
     function getMonacoRTLEnabled() {
-        return localStorage.getItem(MONACO_RTL_LS_KEY) !== 'false';
+        return localStorage.getItem(MONACO_RTL_LS_KEY) === 'true';
     }
     function setMonacoRTLEnabled(on) {
         localStorage.setItem(MONACO_RTL_LS_KEY, String(on));
@@ -2207,7 +2207,7 @@
             injectMessageNavigation(); // Ensure nav buttons exist (handles late DOM)
         }, 200);
 
-        console.log('✅ RTL for VS Code Agents: Initialized');
+        console.log('✅ RTL for VS Code & Cursor Agents: Initialized');
     }
 
     // Start when ready
@@ -2220,7 +2220,7 @@
     // Expose manual refresh function
     window.refreshRTL = function() {
         processElements();
-        console.log('✅ RTL for VS Code Agents: Refreshed');
+        console.log('✅ RTL for VS Code & Cursor Agents: Refreshed');
     };
 
     // Expose YOLO mode toggle and settings
@@ -2236,5 +2236,5 @@
         console.log(`Contains RTL: ${containsRTL(text)}`);
     };
 
-    console.log('🔄 RTL for VS Code Agents loaded. Use window.refreshRTL() to manually refresh.');
+    console.log('🔄 RTL for VS Code & Cursor Agents loaded. Use window.refreshRTL() to manually refresh.');
 })();

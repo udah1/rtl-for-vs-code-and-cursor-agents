@@ -69,8 +69,8 @@
         },
         "rtlForVsCodeAgents.monacoRtlEnabled": {
           "type": "boolean",
-          "default": true,
-          "markdownDescription": "Enable RTL support for Monaco Editor input boxes (e.g. Copilot chat input). Disable this if you see RTL applied to regular code editor windows.\n\n**Tip:** Changes take effect after running 'Disable Custom CSS and JS' → 'Enable Custom CSS and JS' → reload."
+          "default": false,
+          "markdownDescription": "Enable RTL support for Monaco Editor input boxes (e.g. Copilot chat input).\n\n**Default is off** because right-aligning Hebrew/Arabic inside Monaco editors also affects regular code editor windows — the text caret doesn't move correctly through RTL text and text selection misbehaves. Chat messages still get RTL even when this is off. Enable only if you specifically want Copilot's Monaco-based chat input to flip direction.\n\n**Tip:** Changes take effect after running 'Disable Custom CSS and JS' → 'Enable Custom CSS and JS' → reload."
         },
         "rtlForVsCodeAgents.autoCheckUpdates": {
           "type": "boolean",

@@ -78,25 +78,36 @@ Also - The extension checks for updates every time you restart VS CODE.
 
 ## Installation
 
-### VSIX Installation (Recommended)
+Follow these steps in order:
 
-1. Download the latest `.vsix` file from [Releases](https://github.com/GuyRonnen/rtl-for-vs-code-agents/releases)
-2. In VS Code: `Ctrl+Shift+X` → `...` → "Install from VSIX..."
-![Install from VSIX](ReadmeImages/InstallVSIX.png)
+### 1. Install the Custom CSS and JS Loader extension (prerequisite)
 
-3. Select the downloaded file
-4. Restart VS Code
+This is required by the RTL extension to inject styles into the chat UI.
 
-That's it! The extension automatically injects RTL support into Claude Code, Codex (ChatGPT), and Gemini Code Assist - no additional setup needed.
+- **From the Marketplace inside VS Code / Cursor:** open the Extensions view (`Ctrl+Shift+X`), search for `Custom CSS and JS Loader` by `be5invis`, click **Install**.
+- **Or download the VSIX directly:** [Custom CSS and JS Loader VSIX (latest)](https://marketplace.visualstudio.com/_apis/public/gallery/publishers/be5invis/vsextensions/vscode-custom-css/latest/vspackage) → Extensions view → `…` menu → **Install from VSIX…** → select the downloaded file.
+- Marketplace page (for reference): https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css
 
-### To Enable RTL in GitHub Copilot Chat also:
+### 2. Install this extension
 
-Copilot Chat requires the [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css) extension:
+1. Download the latest `.vsix` file from this fork's [Releases page](https://github.com/udah1/rtl-for-vs-code-and-cursor-agents/releases).
+2. In VS Code / Cursor: open the Extensions view (`Ctrl+Shift+X`) → click the `…` menu at the top → **Install from VSIX…** → select the downloaded file.
+   ![Install from VSIX](ReadmeImages/InstallVSIX.png)
+3. Reload the window when prompted.
 
-1. Install [this](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css) extension
-2. Run command (Ctrl+Shift+P): **RTL for VS Code Agents: Configure Custom CSS Loader**
-3. Run command (Ctrl+Shift+P): **Enable Custom CSS and JS** (from Custom CSS extension)
-4. Restart VS Code
+### 3. Enable it
+
+Open the Command Palette (`Ctrl+Shift+P`) and run **Enable Custom CSS and JS** (from the Custom CSS Loader extension), then reload the window when prompted.
+
+That's it for most users — open any agent chat and try typing Hebrew/Arabic/Persian text. Right-to-left should kick in automatically.
+
+#### If RTL doesn't activate after step 3
+
+The extension wires itself up on install, but on some setups (and after VS Code/Cursor updates) the imports list or the agent webviews need a manual nudge. Click the **RTL** indicator in the status bar (bottom-right of the editor) and run these actions in order — or use the Command Palette and search for `RTL for VS Code Agents:`:
+
+1. **Configure Custom CSS Loader** — adds the RTL script to `vscode_custom_css.imports` in your settings.
+2. **Check and Inject** — patches Claude Code / Codex / Gemini Code Assist webviews so RTL works inside their chat panels (Copilot and Cursor don't need this).
+3. **Enable Custom CSS and JS** (from the Custom CSS Loader extension) → reload the window.
 
 
 ## And what about RTL for web chats!?
@@ -320,7 +331,7 @@ This fork adds the following on top of [`GuyRonnen/rtl-for-vs-code-agents`](http
   - Agent reply messages (`.markdown-root > div`) are right-aligned, with code blocks preserved as LTR.
   - User message bubbles align right (single-line and multi-line) via a `direction: rtl` rule on `.composer-human-message .justify-between`.
   - The Composer input box (`.composer-input div[contenteditable="true"]`) switches direction based on typed content.
-- **`rtlForVsCodeAgents.monacoRtlEnabled` setting** (default: `true`) — lets you disable RTL inside Monaco code-editor instances. In Cursor (and probably VS Code as well) right-aligning Hebrew/Arabic inside a real code editor breaks caret movement and text selection; this setting is the clean opt-out (chat messages still get RTL).
+- **`rtlForVsCodeAgents.monacoRtlEnabled` setting** (default: `false`) — controls whether RTL is applied inside Monaco editor instances. Off by default because right-aligning Hebrew/Arabic inside a regular code editor window breaks caret movement and text selection. Enable it if you specifically want Copilot's Monaco-based chat input to flip direction; chat messages get RTL either way.
 - **Settings sync under Custom CSS Loader** — the extension now writes a small `rtl-config.js` file next to the main script and adds it to `vscode_custom_css.imports` *before* the main script. Required because the Custom CSS Loader inlines imported scripts into `workbench.html` and doesn't re-run the extension's config block on settings changes — without this, the main script couldn't see updated settings on a Disable/Enable cycle.
 
 See [PR #11](https://github.com/GuyRonnen/rtl-for-vs-code-agents/pull/11) on the upstream repo for the full diff.

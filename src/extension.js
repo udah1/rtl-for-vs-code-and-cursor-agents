@@ -149,7 +149,7 @@ function buildConfigBlock() {
     // doesn't move correctly through RTL text and text selection misbehaves. Since we
     // can't fully fix that from a CSS/JS injection, we at least expose a toggle so users
     // who hit the issue can turn Monaco RTL off (chat messages still get RTL).
-    const monacoRtlEnabled = config.get('monacoRtlEnabled', true);
+    const monacoRtlEnabled = config.get('monacoRtlEnabled', false);
     return `window.__RTL_CONFIG__ = ${JSON.stringify({ yoloDelayMs: yoloSeconds * 1000, userMessageBorder, monacoRtlEnabled })};`;
 }
 
