@@ -2,7 +2,7 @@
   "name": "rtl-for-vs-code-and-cursor-agents",
   "displayName": "RTL for VS Code & Cursor Agents",
   "description": "Right-to-left (RTL) support for AI chat agents: Cursor, Claude Code, Codex (ChatGPT), Copilot, Gemini, Antigravity.",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "udah1",
   "license": "GPL-3.0",
   "repository": {
