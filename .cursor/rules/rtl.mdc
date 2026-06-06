@@ -1,0 +1,123 @@
+---
+alwaysApply: true
+---
+You are continuing work on a forked VS Code / Cursor extension that adds RTL (Right-to-Left) support for AI chat agents, with added Cursor Composer/Agent support beyond the upstream version.
+Repo layout & key facts
+Local path: c:\Users\yehudah\OneDrive - AMDOCS\Desktop\CodingIsLife\rtl-for-vs-code-agents
+Upstream: https://github.com/GuyRonnen/rtl-for-vs-code-agents (remote: origin)
+User's fork (where releases live): https://github.com/udah1/rtl-for-vs-code-and-cursor-agents (remote: fork)
+Branches you maintain:
+main — the standalone-fork branch. Has rebranded package.json (name rtl-for-vs-code-and-cursor-agents, publisher udah1), updated README.md (fork notice + install guide), updated src/extension.js GitHub auto-update constants, and rtl-config.js. Releases are built from this branch.
+feat/cursor-rtl-support — the branch for the upstream PR to GuyRonnen/rtl-for-vs-code-agents. Minimal diff vs upstream: only the code/CSS changes needed for Cursor support + monacoRtlEnabled setting. Do NOT carry rebranding, README rewrite, rtl-config.js, or fork-specific URLs here.
+Upstream PR: udah1:feat/cursor-rtl-support → GuyRonnen:main (check open PR number on GitHub before referencing in release notes).
+Platform: Windows + PowerShell. Use ; (not &&) to chain shell commands. On macOS/Linux, && is fine.
+Important files
+rtl-for-vs-code-agents.js — the injected frontend script (DOM manipulation, CSS injection, MutationObserver). This is where almost all fixes go.
+src/extension.js — Node-side VS Code extension code (writes config, wires Custom CSS Loader, GitHub auto-update).
+package.json — name/version/publisher/config schema. Bump version for every release.
+rtl-config.js — auto-generated file carrying window.__RTL_CONFIG__ to the frontend. Exists only on main, not on feat/cursor-rtl-support.
+README.md — fork notice + install guide. Only on main.
+How the extension is loaded (critical context)
+The extension does not inject anything itself. It relies on the Custom CSS and JS Loader extension (be5invis.vscode-custom-css) to patch workbench.html with our script. This means:
+Settings changes require a Custom CSS reload cycle: Disable Custom CSS and JS → Enable Custom CSS and JS → Reload Window.
+Caching is aggressive. When the user says "new version isn't loading", that's almost always Custom CSS cache. Tell them to run the cycle above.
+rtl-config.js exists because settings from package.json (rtlForVsCodeAgents.*) need to reach the injected script — we write a tiny JS file that sets window.__RTL_CONFIG__ and is loaded before the main script.
+Cursor-specific selectors already handled (do not rediscover)
+Agent message bubbles: .markdown-root > div (in CONFIG.chatSelectors).
+User input box: .composer-input div[contenteditable="true"] (in CONFIG.inputSelectors).
+User message bubbles: .composer-human-message-content and .composer-questionnaire-toolbar — handled dynamically by processCursorUserMessages() which applies both direction: rtl and text-align: right only when Hebrew/Arabic is detected.
+Code blocks (must stay LTR even with Hebrew comments): .composer-message-codeblock, .ui-default-code, .ui-code-block-default-code — forced LTR in ensureCodeBlocksLTR().
+Streamdown streaming spans: [data-sd-animate="true"], [data-streamdown] — set to unicode-bidi: normal !important to avoid word reversal in bold/italic during streaming.
+Monaco editor bleed prevention: view-line elements inside .monaco-mouse-cursor-text are skipped when monacoRtlEnabled === false (the default).
+Workflow for any new fix
+Reproduce / understand. Ask the user for: which Cursor UI surface (agent message? user message? input? code block? streaming?), Hebrew or English, screenshot if possible, and the relevant DOM classes from DevTools.
+Edit rtl-for-vs-code-agents.js (or src/extension.js if it's a settings/wiring issue). Prefer:
+Adding/extending an existing selector list over creating a new function.
+Conditional JS (check text content) over broad !important CSS, when the same selector can legitimately hold either LTR or RTL content.
+unicode-bidi: normal on inner spans when streamdown causes word reversal.
+Bump package.json version. Patch bump for fixes (e.g. 1.0.x → 1.0.y). Minor bump for new features.
+Build VSIX from main:
+This produces rtl-for-vs-code-and-cursor-agents-<version>.vsix.
+Give it to the user to test. Remind them of the Custom CSS reload cycle if they say it didn't work.
+Once user confirms working — commit, push to both branches, release.
+Commit + push to both branches (PowerShell)
+# On main: commit the fix and the version bump as SEPARATE commits
+# (keeps the fix cherry-pickable cleanly to feat/cursor-rtl-support)
+git checkout main
+git add rtl-for-vs-code-agents.js  # or whichever files
+git commit -F .git/COMMIT_FIX.txt   # write the message to a tempfile first
+$fixCommit = git rev-parse HEAD
+git add package.json README.md     # README changelog on main only
+git commit -F .git/COMMIT_VERSION.txt
+git push fork main
+
+# Cherry-pick ONLY the fix commit to the PR branch (NOT the version bump,
+# NOT any README/rebranding/rtl-config.js changes)
+git checkout feat/cursor-rtl-support
+git cherry-pick $fixCommit
+git push fork feat/cursor-rtl-support
+git checkout main
+If git push returns Internal Server Error from GitHub — it's a transient GitHub issue, just retry the push.
+If the cherry-pick touches files that don't exist on feat/cursor-rtl-support (e.g., rtl-config.js, README.md, fork-specific things) — that's a sign the fix is mixed with rebranding. Split the commit on main before cherry-picking, so the cherry-pick contains only upstream-relevant changes. On feat, restore feat-branch conventions if needed: getMonacoRTLEnabled uses !== 'false' (not === 'true'); console strings say "RTL for VS Code Agents" (not "& Cursor Agents").
+Creating a GitHub Release for the fork (full checklist)
+Prerequisites before release:
+1. User confirmed the fix works (Custom CSS reload cycle applied during testing).
+2. README.md changelog has a ### v<version> entry (main only).
+3. package.json version bumped on main.
+4. main pushed to fork (git push fork main).
+5. feat/cursor-rtl-support updated with upstream-relevant rtl-for-vs-code-agents.js commits only (see "Commit + push" above). Fork-only changes (checksum fix in src/extension.js, README rebranding, rtl-config.js) stay on main — do NOT cherry-pick those to feat/cursor-rtl-support.
+6. gh auth active account is udah1 (not a corporate account): gh auth status
+Build the VSIX (main branch, do not commit .vsix to git):
+Preferred (when npm works):
+  npm install; npx @vscode/vsce package
+  → produces rtl-for-vs-code-and-cursor-agents-<version>.vsix in repo root.
+Fallback when npx/vsce hangs or corporate proxy blocks npm (common on OneDrive / corp network):
+  1. Copy project to /tmp (faster than OneDrive for file ops).
+  2. Unzip the previous release's .vsix as a template (valid extension.vsixmanifest structure).
+  3. rsync current source into extension/ (package.json, rtl-for-vs-code-agents.js, src/, README, icon, LICENSE).
+  4. Update <Identity Version="..."> in extension.vsixmanifest to match package.json.
+  5. zip -qr rtl-for-vs-code-and-cursor-agents-<version>.vsix "[Content_Types].xml" extension.vsixmanifest extension/
+  6. Verify: unzip -l the .vsix; confirm package.json version and new code (e.g. grep for the new function name).
+Release metadata (replace placeholders):
+  Repo:   udah1/rtl-for-vs-code-and-cursor-agents (remote: fork)
+  Tag:    v<version> — target branch main
+  Title:  v<version> — <short description>
+  Asset:  rtl-for-vs-code-and-cursor-agents-<version>.vsix (attach to release, not to git)
+Release notes template (English):
+  ## What's new
+  - **<feature/fix name>** — what was broken, what changed, any caveats.
+  ## Install
+  1. Install [Custom CSS and JS Loader](https://marketplace.visualstudio.com/items?itemName=be5invis.vscode-custom-css).
+  2. Download and install the .vsix from this release.
+  3. Run **Enable Custom CSS and JS** → reload.
+  ---
+  This release exists in the hope that the upstream repo will eventually also support Cursor. See the open PR at GuyRonnen/rtl-for-vs-code-agents#<PR number>.
+Create release via GitHub CLI (preferred):
+  gh release create v<version> \
+    "./rtl-for-vs-code-and-cursor-agents-<version>.vsix" \
+    --repo udah1/rtl-for-vs-code-and-cursor-agents \
+    --target main \
+    --title "v<version> — <short description>" \
+    --notes-file release-notes.md
+Create release via GitHub UI (manual):
+  https://github.com/udah1/rtl-for-vs-code-and-cursor-agents/releases/new
+  → create tag v<version> on main → paste title + notes → attach .vsix → Publish release.
+After release:
+  src/extension.js auto-update reads udah1/rtl-for-vs-code-and-cursor-agents releases — users get notified on next startup.
+  Remind testers: Disable Custom CSS and JS → Enable Custom CSS and JS → Reload Window.
+Fork-only vs upstream-relevant:
+  Fork release (main) may include: checksum fix (src/extension.js), fork README, rtl-config.js, version bump, rebranded package.json.
+  Upstream PR (feat/cursor-rtl-support) gets only rtl-for-vs-code-agents.js fixes (+ monacoRtlEnabled wiring if upstream-relevant).
+Updating the upstream PR
+The PR is from udah1:feat/cursor-rtl-support → GuyRonnen:main. After git push fork feat/cursor-rtl-support, the PR updates automatically — no extra action needed. Do not push rebranding/README/fork-URL changes to this branch.
+Things to NOT do
+Don't commit .vsix files to git (they're build artifacts; only attach them to Releases).
+Don't change publisher, name, or auto-update GitHub URLs on feat/cursor-rtl-support.
+Don't add rtl-config.js to feat/cursor-rtl-support.
+Don't use && in PowerShell — use ;. (&& is fine on bash/zsh.)
+Don't read files with cat/type — use the Read tool. Don't search with raw grep — use the Grep tool.
+Don't add comments that just narrate what code does. Only comment non-obvious intent (e.g., why unicode-bidi: normal is needed on streamdown spans).
+Communication style
+The user is Hebrew-speaking and often writes in Hebrew. Respond in the language they wrote in (Hebrew → Hebrew, English → English). Mixed is fine.
+The user prefers minimal changes, concrete steps, and clear instructions about what to click in Cursor / GitHub when manual action is needed.
+When a fix doesn't work, first suspect Custom CSS cache before suspecting the code.
