@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const https = require('https');
+const crypto = require('crypto');
 
 const MARKER = 'RTL for VS Code Agents';
 const SCRIPT_FILE = 'rtl-for-vs-code-agents.js';
@@ -537,6 +538,161 @@ async function checkCopilotStatus() {
     }
 }
 
+// --- Editor checksum fix ---
+// The Custom CSS and JS Loader modifies workbench.html, which no longer matches
+// the SHA-256 recorded in product.json. VS Code / Cursor then shows
+// "Your installation appears to be corrupt". We reconcile product.json's
+// checksums with the files on disk (same approach as RimuruChan's
+// "Fix VSCode Checksums Next"), so the warning stops. Backs up the original
+// product.json to product.json.orig.<version> and self-heals on every startup.
+
+function getChecksumPaths() {
+    const appRoot = vscode.env.appRoot;
+    return {
+        appRoot,
+        outDir: path.join(appRoot, 'out'),
+        productJson: path.join(appRoot, 'product.json'),
+        backup: path.join(appRoot, `product.json.orig.${vscode.version}`)
+    };
+}
+
+function computeFileChecksum(filePath) {
+    const buf = fs.readFileSync(filePath);
+    return crypto.createHash('sha256').update(buf).digest('base64').replace(/=+$/, '');
+}
+
+// Remove stale product.json.orig.* backups left by previous editor versions.
+function cleanStaleChecksumBackups() {
+    try {
+        const { appRoot } = getChecksumPaths();
+        const entries = fs.readdirSync(appRoot)
+            .filter(name => name.indexOf('product.json.orig.') === 0)
+            .filter(name => name !== `product.json.orig.${vscode.version}`);
+        for (const name of entries) {
+            try { fs.unlinkSync(path.join(appRoot, name)); } catch (e) { /* ignore */ }
+        }
+    } catch (e) { /* appRoot not readable — ignore */ }
+}
+
+// Recompute and rewrite mismatched checksums. Returns:
+//   'applied' | 'unchanged' | 'no-checksums' | 'error:<msg>'
+function applyChecksumFix() {
+    const { outDir, productJson, backup } = getChecksumPaths();
+    let product;
+    try {
+        product = JSON.parse(fs.readFileSync(productJson, 'utf8'));
+    } catch (e) {
+        return `error:cannot read product.json (${e.message})`;
+    }
+    if (!product.checksums) {
+        return 'no-checksums';
+    }
+
+    let changed = false;
+    for (const [rel, expected] of Object.entries(product.checksums)) {
+        const filePath = path.join(outDir, ...rel.split('/'));
+        if (!fs.existsSync(filePath)) continue;
+        let actual;
+        try {
+            actual = computeFileChecksum(filePath);
+        } catch (e) {
+            continue;
+        }
+        if (actual !== expected) {
+            product.checksums[rel] = actual;
+            changed = true;
+        }
+    }
+
+    if (!changed) {
+        return 'unchanged';
+    }
+
+    try {
+        if (!fs.existsSync(backup)) {
+            fs.copyFileSync(productJson, backup);
+        }
+        fs.writeFileSync(productJson, JSON.stringify(product, null, '\t'), 'utf8');
+        return 'applied';
+    } catch (e) {
+        return `error:cannot write product.json — likely needs elevated permissions (${e.message})`;
+    }
+}
+
+function restoreChecksumBackup() {
+    const { productJson, backup } = getChecksumPaths();
+    if (!fs.existsSync(backup)) {
+        return 'no-backup';
+    }
+    try {
+        fs.copyFileSync(backup, productJson);
+        fs.unlinkSync(backup);
+        return 'restored';
+    } catch (e) {
+        return `error:${e.message}`;
+    }
+}
+
+async function fixChecksumsCommand() {
+    cleanStaleChecksumBackups();
+    const result = applyChecksumFix();
+
+    if (result === 'applied') {
+        const reload = 'Reload Window';
+        const choice = await vscode.window.showInformationMessage(
+            'RTL: editor checksums fixed. Reload to clear the "installation appears to be corrupt" warning.',
+            reload
+        );
+        if (choice === reload) {
+            vscode.commands.executeCommand('workbench.action.reloadWindow');
+        }
+    } else if (result === 'unchanged') {
+        vscode.window.showInformationMessage('RTL: editor checksums already match — nothing to fix.');
+    } else if (result === 'no-checksums') {
+        vscode.window.showWarningMessage('RTL: product.json has no checksums section — nothing to fix.');
+    } else if (result.indexOf('error:') === 0) {
+        vscode.window.showWarningMessage(`RTL: checksum fix failed — ${result.slice('error:'.length)}`);
+    }
+}
+
+async function restoreChecksumsCommand() {
+    const result = restoreChecksumBackup();
+    if (result === 'restored') {
+        const reload = 'Reload Window';
+        const choice = await vscode.window.showInformationMessage(
+            'RTL: original product.json restored. Reload to apply.',
+            reload
+        );
+        if (choice === reload) {
+            vscode.commands.executeCommand('workbench.action.reloadWindow');
+        }
+    } else if (result === 'no-backup') {
+        vscode.window.showInformationMessage('RTL: no checksum backup found — nothing to restore.');
+    } else if (result.indexOf('error:') === 0) {
+        vscode.window.showWarningMessage(`RTL: checksum restore failed — ${result.slice('error:'.length)}`);
+    }
+}
+
+// Quiet auto-fix on startup. Only acts when there is an actual mismatch and the
+// setting is enabled. Failures are logged, never surfaced as popups.
+function maybeAutoFixChecksums() {
+    const config = getConfig();
+    if (!config.get('autoFixChecksums', true)) {
+        return;
+    }
+    try {
+        cleanStaleChecksumBackups();
+        const result = applyChecksumFix();
+        if (result.indexOf('error:') === 0) {
+            console.error('RTL: auto checksum fix failed:', result);
+        } else if (result === 'applied') {
+            console.log('RTL: editor checksums reconciled on startup.');
+        }
+    } catch (e) {
+        console.error('RTL: auto checksum fix threw:', e.message);
+    }
+}
+
 // --- Auto-Update functions ---
 
 function getLocalVersion(extensionPath) {
@@ -923,6 +1079,8 @@ async function activate(context) {
         vscode.commands.registerCommand('rtlForVsCodeAgents.configureCustomCss', () => configureCustomCss(context)),
         vscode.commands.registerCommand('rtlForVsCodeAgents.checkForUpdates', () => checkForUpdates(context, { quiet: false })),
         vscode.commands.registerCommand('rtlForVsCodeAgents.removeInjections', () => removeAllInjections(context)),
+        vscode.commands.registerCommand('rtlForVsCodeAgents.fixChecksums', () => fixChecksumsCommand()),
+        vscode.commands.registerCommand('rtlForVsCodeAgents.restoreChecksums', () => restoreChecksumsCommand()),
         vscode.commands.registerCommand('rtlForVsCodeAgents.showMenu', async () => {
             // Run update check in background (updates status bar, shows notification if update found)
             checkForUpdates(context, { quiet: true, isAutoCheck: true });
@@ -931,6 +1089,8 @@ async function activate(context) {
                 { label: '$(sync) Check for Updates', command: 'rtlForVsCodeAgents.checkForUpdates' },
                 { label: '$(syringe) Check and Inject RTL', command: 'rtlForVsCodeAgents.checkAndInject' },
                 { label: '$(settings-gear) Configure Custom CSS Loader', command: 'rtlForVsCodeAgents.configureCustomCss' },
+                { label: '$(verified) Fix Editor Checksums (corrupt warning)', command: 'rtlForVsCodeAgents.fixChecksums' },
+                { label: '$(discard) Restore Editor Checksums', command: 'rtlForVsCodeAgents.restoreChecksums' },
                 { label: '$(trash) Remove All RTL Injections', command: 'rtlForVsCodeAgents.removeInjections' }
             ];
             const picked = await vscode.window.showQuickPick(items, { placeHolder: 'RTL for VS Code Agents' });
@@ -973,6 +1133,10 @@ async function activate(context) {
     checkCopilotStatus();
     scheduleAutoCheck(context);
     maybeAutoConfigureCustomCss(context);
+
+    // Reconcile product.json checksums so the "installation appears to be corrupt"
+    // warning (caused by Custom CSS modifying workbench.html) stops appearing.
+    maybeAutoFixChecksums();
 
     // Auto-check for extension updates (delayed to not block startup)
     setTimeout(() => {

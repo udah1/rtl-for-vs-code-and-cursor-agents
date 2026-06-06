@@ -2,7 +2,7 @@
   "name": "rtl-for-vs-code-and-cursor-agents",
   "displayName": "RTL for VS Code & Cursor Agents",
   "description": "Right-to-left (RTL) support for AI chat agents: Cursor, Claude Code, Codex (ChatGPT), Copilot, Gemini, Antigravity.",
-  "version": "1.0.6",
+  "version": "1.0.8",
   "publisher": "udah1",
   "license": "GPL-3.0",
   "repository": {
@@ -34,6 +34,14 @@
       {
         "command": "rtlForVsCodeAgents.removeInjections",
         "title": "RTL for VS Code Agents: Remove All RTL Injections"
+      },
+      {
+        "command": "rtlForVsCodeAgents.fixChecksums",
+        "title": "RTL for VS Code Agents: Fix Editor Checksums (corrupt warning)"
+      },
+      {
+        "command": "rtlForVsCodeAgents.restoreChecksums",
+        "title": "RTL for VS Code Agents: Restore Editor Checksums"
       }
     ],
     "configuration": {
@@ -82,6 +90,11 @@
           "default": 24,
           "minimum": 0,
           "description": "How often to check for updates (in hours). 0 = check on startup only."
+        },
+        "rtlForVsCodeAgents.autoFixChecksums": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Automatically reconcile the editor's `product.json` checksums on startup so the **\"Your installation appears to be corrupt\"** warning (caused by the Custom CSS and JS Loader modifying `workbench.html`) stops appearing.\n\nThis edits `product.json` inside the editor installation and keeps a backup at `product.json.orig.<version>`. On Windows the install folder may require admin rights — if the write fails, run the manual **\"Fix Editor Checksums\"** command from an elevated session. Use **\"Restore Editor Checksums\"** to revert.\n\nMust re-run (or restart) after each editor update or Custom CSS enable/disable cycle — auto-fix handles this on the next startup."
         }
       }
     }

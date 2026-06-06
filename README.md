@@ -176,6 +176,14 @@ powershell -ExecutionPolicy Bypass -File .\diagnose-rtl.ps1
 
 Changelog
 
+### v1.0.8
+
+- **RTL for Markdown tables:** Tables in Markdown document editor / preview (`.markdown-editor-react`, `.markdown-body`) now get proper RTL — `direction: rtl` plus `text-align: right` on `th`/`td` so mixed Hebrew/English is readable and flush right. English-only tables stay LTR. Lightweight pass only (no preview freeze). Also applies to tables inside chat markdown.
+
+### v1.0.7
+
+- **Fix the "installation appears to be corrupt" warning:** New auto-fix that reconciles the editor's `product.json` checksums with the modified `workbench.html` (the file the Custom CSS and JS Loader patches). Runs on startup (`rtlForVsCodeAgents.autoFixChecksums`, on by default) and also available as commands **"Fix Editor Checksums"** / **"Restore Editor Checksums"**. Keeps a backup at `product.json.orig.<version>` and self-heals after editor updates / Custom CSS enable-disable cycles. On Windows the install folder may require admin rights.
+
 ### v1.0.6
 
 - **Fix Markdown Preview freeze in Cursor/VS Code:** Skip RTL processing on Markdown document surfaces only (`.markdown-editor-react`, `.ui-rich-text-editor[data-variant="document"]`, classic `.markdown-body` / `.markdown-preview`) so opening an `.md` file in Preview no longer freezes the IDE from MutationObserver / polling on hundreds of nodes.
