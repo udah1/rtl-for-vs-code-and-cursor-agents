@@ -176,6 +176,10 @@ powershell -ExecutionPolicy Bypass -File .\diagnose-rtl.ps1
 
 Changelog
 
+### v1.0.9
+
+- **Cursor questionnaire answer RTL:** Hebrew/Arabic answers in Cursor's questionnaire UI (`.user-questionnaire-answer-text`) now get `direction: rtl` and `text-align: right` when the content is RTL, same as other user message bubbles.
+
 ### v1.0.8
 
 - **RTL for Markdown tables:** Tables in Markdown document editor / preview (`.markdown-editor-react`, `.markdown-body`) now get proper RTL — `direction: rtl` plus `text-align: right` on `th`/`td` so mixed Hebrew/English is readable and flush right. English-only tables stay LTR. Lightweight pass only (no preview freeze). Also applies to tables inside chat markdown.
