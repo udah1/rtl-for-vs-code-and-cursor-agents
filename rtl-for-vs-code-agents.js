@@ -1863,12 +1863,13 @@
      * Targets:
      *   .composer-human-message-content — regular user message bubbles
      *   .composer-questionnaire-toolbar — inline questionnaire / choice toolbar
+     *   .user-questionnaire-answer-text — questionnaire answer bubble text
      * These don't go through processChildrenForRTL because they don't have
      * .markdown-root, so we flag them directly: Hebrew/Arabic flips to RTL,
      * English stays LTR.
      */
     function processCursorUserMessages() {
-        document.querySelectorAll('.composer-human-message-content, .composer-questionnaire-toolbar').forEach(el => {
+        document.querySelectorAll('.composer-human-message-content, .composer-questionnaire-toolbar, .user-questionnaire-answer-text').forEach(el => {
             const text = el.textContent || '';
             const hasRTL = shouldBeRTLText(text);
             const wasRTL = el.getAttribute('data-rtl-applied') === 'true';
