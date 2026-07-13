@@ -25,7 +25,7 @@ rtl-config.js exists because settings from package.json (rtlForVsCodeAgents.*) n
 Cursor-specific selectors already handled (do not rediscover)
 Agent message bubbles: .markdown-root > div (in CONFIG.chatSelectors).
 User input box: .composer-input div[contenteditable="true"] (in CONFIG.inputSelectors).
-User message bubbles: .composer-human-message-content and .composer-questionnaire-toolbar — handled dynamically by processCursorUserMessages() which applies both direction: rtl and text-align: right only when Hebrew/Arabic is detected.
+User message bubbles: .composer-human-message-content, .composer-questionnaire-toolbar, and .user-questionnaire-answer-text — handled dynamically by processCursorUserMessages() which applies both direction: rtl and text-align: right only when Hebrew/Arabic is detected.
 Code blocks (must stay LTR even with Hebrew comments): .composer-message-codeblock, .ui-default-code, .ui-code-block-default-code — forced LTR in ensureCodeBlocksLTR().
 Streamdown streaming spans: [data-sd-animate="true"], [data-streamdown] — set to unicode-bidi: normal !important to avoid word reversal in bold/italic during streaming.
 Monaco editor bleed prevention: view-line elements inside .monaco-mouse-cursor-text are skipped when monacoRtlEnabled === false (the default).
