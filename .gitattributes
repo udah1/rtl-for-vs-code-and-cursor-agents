@@ -1,0 +1,15 @@
+# main used to be stored with CRLF while feat/cursor-rtl-support was stored with
+# LF, so every cherry-pick between the two conflicted on every line of the file.
+# Pinning text to LF in the repository keeps the branches diffable.
+* text=auto eol=lf
+
+# Windows-only helper scripts are checked out with CRLF.
+*.ps1 text eol=crlf
+
+# Shell scripts must stay LF to remain runnable.
+*.sh text eol=lf
+
+*.png binary
+*.pdn binary
+*.vsix binary
+*.mp4 binary
