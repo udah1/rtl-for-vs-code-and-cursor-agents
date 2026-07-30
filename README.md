@@ -131,6 +131,7 @@ Settings
 | `rtlForVsCodeAgents.updateCheckIntervalHours` | `24`    | How often to check for updates (0 = startup only)                                                        |
 | `rtlForVsCodeAgents.userMessageBorder`        | `true`  | Show coral border on user messages. Easier to toggle via right-click on ↑↓ buttons                       |
 | `rtlForVsCodeAgents.yoloCountdownSeconds`     | `5`     | YOLO mode countdown before auto-approve (0 = instant). Easier to change via right-click on the 💪 button |
+| `rtlForVsCodeAgents.markdownPreviewRtl`       | `true`  | RTL in the Markdown document **Preview** tab — per-block direction, plus full RTL for RTL-dominant docs   |
 
 
 
@@ -175,6 +176,12 @@ powershell -ExecutionPolicy Bypass -File .\diagnose-rtl.ps1
 ```
 
 Changelog
+
+### v1.0.12
+
+- **RTL in the Markdown Preview tab, without the freeze:** new `rtlForVsCodeAgents.markdownPreviewRtl` setting (on by default). Every paragraph, heading, list item, blockquote and table cell picks its own direction from its content, so Hebrew/Arabic blocks read right-to-left while English blocks stay left-to-right. When a document is RTL overall, the content root gets a real `direction: rtl`, which also moves list markers and blockquote rules to the right side and flips table column order.
+- **Why this is safe:** Cursor's Preview tab is ProseMirror-backed, and writing into its DOM is what caused the v1.0.8 freeze. The direction here comes from CSS plus a single `data-rtl-md` attribute written on the wrapper **above** the ProseMirror root (verified seven levels above `div.tiptap.ProseMirror`), which is outside the subtree ProseMirror observes. Nothing is ever written inside that root. The attribute is only rewritten when the value actually changes, and direction detection samples just the leading blocks with a short-lived cache, so the periodic pass stays cheap on large documents.
+- Note that raw `<div dir="rtl">` in a Markdown file has no effect in this tab: ProseMirror parses HTML through its own schema and discards elements and attributes it doesn't model, so the `dir` never reaches the DOM. This setting is the supported way to get the same result.
 
 ### v1.0.11
 
