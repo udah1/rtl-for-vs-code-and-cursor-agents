@@ -176,6 +176,17 @@ powershell -ExecutionPolicy Bypass -File .\diagnose-rtl.ps1
 
 Changelog
 
+### v1.0.11
+
+- **Upgrades now actually take effect:** Extension folders are versioned, but nothing rewrote `vscode_custom_css.imports` on upgrade — `configureCustomCss()` was the only writer and it only runs automatically when `autoConfigureCustomCss` is on, which is off by default. So after installing a new VSIX the new version was installed and active while Custom CSS kept loading the **previous** version's script, with no indication anything was wrong. The extension now repairs its own import paths on every startup, and when it finds stale ones it offers to reload Custom CSS and JS (and then the window) for you instead of leaving you to run the disable/enable cycle by hand. Only entries the extension owns are rewritten; other imports are left untouched.
+
+### v1.0.10
+
+- **Fix Markdown preview freezing (regression from v1.0.8):** Cursor's Markdown document editor / preview is ProseMirror-backed, and ProseMirror re-parses the DOM whenever it detects an external mutation. The v1.0.8 table pass wrote inline styles and RLM marks into those tables every 200ms, so each write triggered a re-parse, each re-parse triggered another write — the renderer was measured blocked for up to 80 seconds on complex documents. RTL for Markdown tables is now done **purely in CSS** (`unicode-bidi: plaintext` on cells), with no DOM writes at all in those surfaces.
+- **Fix RTL work leaking into Markdown documents:** `characterData` mutations report the text node, not an element, so the editor-area guard never matched them — every text change inside a Markdown document scheduled a full document-wide RTL pass. The guard now resolves text nodes through their parent.
+- **Faster RTL detection:** RTL range matching is now a single compiled regex instead of a per-character `Array.some()` closure, `\p{L}` is no longer re-tested per character, and direction detection caps its scan, so the periodic pass stays cheap on long documents and wide tables.
+- **Chat table styling is now idempotent:** `applyTableRTL()` only writes when the RTL state actually changed or a re-render stripped its styles, instead of rewriting every cell on every tick.
+
 ### v1.0.9
 
 - **Cursor questionnaire answer RTL:** Hebrew/Arabic answers in Cursor's questionnaire UI (`.user-questionnaire-answer-text`) now get `direction: rtl` and `text-align: right` when the content is RTL, same as other user message bubbles.
