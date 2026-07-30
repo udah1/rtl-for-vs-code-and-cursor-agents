@@ -1040,6 +1040,107 @@ function maybeAutoConfigureCustomCss(context) {
     }
 }
 
+/**
+ * Point vscode_custom_css.imports at THIS version's folder.
+ *
+ * Extension folders are versioned (…-1.0.9, …-1.0.10), and nothing rewrites the
+ * import paths on upgrade: configureCustomCss() is the only writer and it only
+ * runs automatically when autoConfigureCustomCss is on, which is off by default.
+ * The result is silent and very confusing — the new version is installed and
+ * active, while Custom CSS keeps loading the previous version's script.
+ *
+ * Only rewrites entries that are already ours; never adds imports that the user
+ * hasn't configured (that stays the job of configureCustomCss).
+ */
+async function repairCustomCssImportPaths(context) {
+    const config = vscode.workspace.getConfiguration();
+    const imports = config.get('vscode_custom_css.imports', []);
+    if (!Array.isArray(imports) || imports.length === 0) return false;
+
+    const urlFor = (file) =>
+        `file:///${path.join(context.extensionPath, file).replace(/\\/g, '/')}`;
+    const owned = [SCRIPT_FILE, CONFIG_FILE].map(file => ({ file, url: urlFor(file) }));
+
+    let changed = false;
+    const repaired = imports.map(entry => {
+        if (typeof entry !== 'string') return entry;
+        const match = owned.find(({ file }) => entry.endsWith(`/${file}`));
+        if (!match || entry === match.url) return entry;
+        changed = true;
+        return match.url;
+    });
+
+    if (!changed) return false;
+
+    await config.update('vscode_custom_css.imports', repaired, vscode.ConfigurationTarget.Global);
+    return true;
+}
+
+/**
+ * Run the Custom CSS Loader's own reload, falling back to disable + enable.
+ * Returns false when the loader isn't installed / exposes neither command.
+ */
+async function reloadCustomCssLoader() {
+    const available = new Set(await vscode.commands.getCommands(true));
+
+    if (available.has('extension.updateCustomCSS')) {
+        await vscode.commands.executeCommand('extension.updateCustomCSS');
+        return true;
+    }
+    if (available.has('extension.uninstallCustomCSS') && available.has('extension.installCustomCSS')) {
+        await vscode.commands.executeCommand('extension.uninstallCustomCSS');
+        await vscode.commands.executeCommand('extension.installCustomCSS');
+        return true;
+    }
+    return false;
+}
+
+// Custom CSS bakes the import paths into workbench.html, so repairing Settings
+// alone still leaves the old script loaded until the loader runs again.
+async function promptCustomCssReload() {
+    const RELOAD = 'Reload Custom CSS and JS';
+    const choice = await vscode.window.showWarningMessage(
+        'RTL: Custom CSS was still loading a previous version of the RTL script. The paths are fixed — reload Custom CSS and JS to actually apply this version.',
+        RELOAD,
+        'Later'
+    );
+    if (choice !== RELOAD) return;
+
+    let reloaded = false;
+    try {
+        reloaded = await reloadCustomCssLoader();
+    } catch (e) {
+        console.error('RTL: Custom CSS reload failed:', e.message);
+    }
+
+    if (!reloaded) {
+        vscode.window.showWarningMessage(
+            'RTL: could not reload Custom CSS automatically. Run "Disable Custom CSS and JS" then "Enable Custom CSS and JS" from the Command Palette, then reload the window.'
+        );
+        return;
+    }
+
+    const reload = await vscode.window.showInformationMessage(
+        'RTL: Custom CSS reloaded. Reload the window to finish applying this version.',
+        'Reload Window'
+    );
+    if (reload === 'Reload Window') {
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
+}
+
+async function maybeRepairCustomCssImports(context) {
+    let repaired = false;
+    try {
+        repaired = await repairCustomCssImportPaths(context);
+    } catch (e) {
+        console.error('RTL: failed to repair vscode_custom_css.imports:', e.message);
+        return;
+    }
+    // Deliberately not awaited: activation must not block on a dialog.
+    if (repaired) promptCustomCssReload();
+}
+
 function scheduleUpdateCheck(context) {
     const config = getConfig();
     if (!config.get('autoCheckUpdates', true)) return;
@@ -1127,6 +1228,9 @@ async function activate(context) {
 
     // Keep rtl-config.js in sync with current Settings on every startup
     writeConfigFile(context.extensionPath);
+
+    // Self-heal import paths still pointing at a previous version's folder
+    await maybeRepairCustomCssImports(context);
 
     // Auto-inject RTL into agent webviews
     checkAndInject(context, { quiet: false, interactive: true, notifyNoChanges: false });
