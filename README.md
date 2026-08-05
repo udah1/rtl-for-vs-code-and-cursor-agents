@@ -177,6 +177,10 @@ powershell -ExecutionPolicy Bypass -File .\diagnose-rtl.ps1
 
 Changelog
 
+### v1.0.13
+
+- **RTL for "Ask Question" answer bubbles in the transcript:** answers to a completed ask-question tool call (`[data-testid="agent-transcript-ask-question-card"]`) now get RTL when they contain Hebrew/Arabic. This bubble has no semantic class — Cursor renders it as a plain `<div><span>` with only hashed, build-specific utility classes — so it was invisible to the existing `.user-questionnaire-answer-text` selector. Detection now anchors on the stable `data-testid` and the DOM depth relative to it instead.
+
 ### v1.0.12
 
 - **RTL in the Markdown Preview tab, without the freeze:** new `rtlForVsCodeAgents.markdownPreviewRtl` setting (on by default). Every paragraph, heading, list item, blockquote and table cell picks its own direction from its content, so Hebrew/Arabic blocks read right-to-left while English blocks stay left-to-right. When a document is RTL overall, the content root gets a real `direction: rtl`, which also moves list markers and blockquote rules to the right side and flips table column order.
